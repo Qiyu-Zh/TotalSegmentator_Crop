@@ -476,7 +476,7 @@ def totalsegmentator(input: Union[str, Path, Nifti1Image], output: Union[str, Pa
                             no_derived_masks=no_derived_masks, v1_order=v1_order,
                             stats_aggregation=stats_aggregation)
     if crop_save:
-        return
+        return seg_img, ct_img
     seg = seg_img.get_fdata().astype(np.uint8)
 
     try:

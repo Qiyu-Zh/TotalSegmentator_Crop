@@ -68,10 +68,9 @@ def totalsegmentator(input: Union[str, Path, Nifti1Image], output: Union[str, Pa
                      fast=False, nora_tag="None", preview=False, task="total", roi_subset=None,
                      statistics=False, radiomics=False, crop_path=None, body_seg=False,
                      force_split=False, output_type="nifti", quiet=False, verbose=False, test=0,
-                     skip_saving=False, device="gpu", license_number=None,
+                     skip_saving=False, device="gpu", license_number=None, crop_save = None,
                      statistics_exclude_masks_at_border=True, no_derived_masks=False,
-                     v1_order=False, fastest=False, roi_subset_robust=None, stats_aggregation="mean",
-                     remove_small_blobs=False):
+                     v1_order=False, fastest=False, roi_subset_robust=None, stats_aggregation="mean"):
     """
     Run TotalSegmentator from within python.
 
@@ -80,6 +79,7 @@ def totalsegmentator(input: Union[str, Path, Nifti1Image], output: Union[str, Pa
 
     Return: multilabel Nifti1Image
     """
+
     if not isinstance(input, Nifti1Image):
         input = Path(input)
 
@@ -467,14 +467,16 @@ def totalsegmentator(input: Union[str, Path, Nifti1Image], output: Union[str, Pa
     folds = [0]  # None
     seg_img, ct_img, stats = nnUNet_predict_image(input, output, task_id, model=model, folds=folds,
                             trainer=trainer, tta=False, multilabel_image=ml, resample=resample,
-                            crop=crop, crop_path=crop_path, task_name=task, nora_tag=nora_tag, preview=preview,
+                            crop=crop, crop_path=crop_path, crop_save=crop_save, task_name=task, nora_tag=nora_tag, preview=preview,
                             nr_threads_resampling=nr_thr_resamp, nr_threads_saving=nr_thr_saving,
                             force_split=force_split, crop_addon=crop_addon, roi_subset=roi_subset,
                             output_type=output_type, statistics=statistics_fast,
                             quiet=quiet, verbose=verbose, test=test, skip_saving=skip_saving, device=device,
                             exclude_masks_at_border=statistics_exclude_masks_at_border,
                             no_derived_masks=no_derived_masks, v1_order=v1_order,
-                            stats_aggregation=stats_aggregation, remove_small_blobs=remove_small_blobs)
+                            stats_aggregation=stats_aggregation)
+    if crop_save:
+        return
     seg = seg_img.get_fdata().astype(np.uint8)
 
     try:

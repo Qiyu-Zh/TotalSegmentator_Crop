@@ -287,12 +287,13 @@ def save_segmentation_nifti(class_map_item, tmp_dir=None, file_out=None, nora_ta
 
 def nnUNet_predict_image(file_in: Union[str, Path, Nifti1Image], file_out, task_id, model="3d_fullres", folds=None,
                          trainer="nnUNetTrainerV2", tta=False, multilabel_image=True,
-                         resample=None, crop=None, crop_path=None, task_name="total", nora_tag="None", preview=False,
+                         resample=None, crop=None, crop_path=None, crop_save = None, task_name="total", nora_tag="None", preview=False,
                          save_binary=False, nr_threads_resampling=1, nr_threads_saving=6, force_split=False,
                          crop_addon=[3,3,3], roi_subset=None, output_type="nifti",
                          statistics=False, quiet=False, verbose=False, test=0, skip_saving=False,
                          device="cuda", exclude_masks_at_border=True, no_derived_masks=False,
-                         v1_order=False, stats_aggregation="mean", remove_small_blobs=False):
+                         v1_order=False, stats_aggregation="mean"):
+
     """
     crop: string or a nibabel image
     resample: None or float (target spacing for all dimensions) or list of floats
@@ -327,15 +328,6 @@ def nnUNet_predict_image(file_in: Union[str, Path, Nifti1Image], file_out, task_
     if type(resample) is float:
         resample = [resample, resample, resample]
     
-    if v1_order and task_name == "total":
-        label_map = class_map["total_v1"]
-    else:
-        label_map = class_map[task_name]
-    
-    # Keep only voxel values corresponding to the roi_subset
-    if roi_subset is not None:
-        label_map = {k: v for k, v in label_map.items() if v in roi_subset}
-            
     # for debugging
     # tmp_dir = file_in.parent / ("nnunet_tmp_" + ''.join(random.Random().choices(string.ascii_uppercase + string.digits, k=8)))
     # (tmp_dir).mkdir(exist_ok=True)
@@ -372,10 +364,6 @@ def nnUNet_predict_image(file_in: Union[str, Path, Nifti1Image], file_out, task_
         if len(img_in_orig.shape) > 3:
             print(f"WARNING: Input image has {len(img_in_orig.shape)} dimensions. Only using first three dimensions.")
             img_in_orig = nib.Nifti1Image(img_in_orig.get_fdata()[:,:,:,0], img_in_orig.affine)
-            
-        img_dtype = img_in_orig.get_data_dtype()
-        if img_dtype.fields is not None:
-            raise TypeError(f"Invalid dtype {img_dtype}. Expected a simple dtype, not a structured one.")
 
         # takes ~0.9s for medium image
         img_in = nib.Nifti1Image(img_in_orig.get_fdata(), img_in_orig.affine)  # copy img_in_orig
@@ -388,23 +376,13 @@ def nnUNet_predict_image(file_in: Union[str, Path, Nifti1Image], file_out, task_
                     crop_mask_img = nib.load(crop_path / f"{crop}.nii.gz")
             else:
                 crop_mask_img = crop
-                
-            if crop_mask_img.get_fdata().sum() == 0:
-                if not quiet: 
-                    print("INFO: Crop is empty. Returning empty segmentation.")
-                img_out = nib.Nifti1Image(np.zeros(img_in.shape, dtype=np.uint8), img_in.affine)
-                img_out = add_label_map_to_nifti(img_out, label_map)
-                nib.save(img_out, file_out)
-                if nora_tag != "None":
-                    subprocess.call(f"/opt/nora/src/node/nora -p {nora_tag} --add {file_out} --addtag atlas", shell=True)
-                return img_out, img_in_orig, None
-                
             img_in, bbox = crop_to_mask(img_in, crop_mask_img, addon=crop_addon, dtype=np.int32,
                                       verbose=verbose)
             if not quiet:
                 print(f"  cropping from {crop_mask_img.shape} to {img_in.shape}")
 
         img_in = as_closest_canonical(img_in)
+
 
         if resample is not None:
             if not quiet: print("Resampling...")
@@ -418,6 +396,11 @@ def nnUNet_predict_image(file_in: Union[str, Path, Nifti1Image], file_out, task_
             if not quiet: print(f"  Resampled in {time.time() - st:.2f}s")
         else:
             img_in_rsp = img_in
+        if crop_save:
+            name, _ = os.path.splitext(crop_save)
+            np.save(name+ ".npy", bbox)
+            nib.save(img_in_rsp, crop_save)
+            return None, None, None
 
         nib.save(img_in_rsp, tmp_dir / "s01_0000.nii.gz")
 
@@ -537,23 +520,11 @@ def nnUNet_predict_image(file_in: Union[str, Path, Nifti1Image], file_out, task_
 
         if task_name == "body":
             vox_vol = np.prod(img_pred.header.get_zooms())
-            size_thr_mm3 = 50000
+            size_thr_mm3 = 50000 / vox_vol
             img_pred_pp = remove_small_blobs_multilabel(img_pred.get_fdata().astype(np.uint8),
                                                         class_map[task_name], ["body_extremities"],
-                                                        interval=[size_thr_mm3/vox_vol, 1e10], debug=False, quiet=quiet)
+                                                        interval=[size_thr_mm3, 1e10], debug=False, quiet=quiet)
             img_pred = nib.Nifti1Image(img_pred_pp, img_pred.affine)
-        
-        # General postprocessing    
-        if remove_small_blobs:
-            if not quiet: print("Removing small blobs...")
-            st = time.time()
-            vox_vol = np.prod(img_pred.header.get_zooms())
-            size_thr_mm3 = 200
-            img_pred_pp = remove_small_blobs_multilabel(img_pred.get_fdata().astype(np.uint8),
-                                                        class_map[task_name], list(class_map[task_name].values()),
-                                                        interval=[size_thr_mm3/vox_vol, 1e10], debug=False, quiet=quiet)  # ~24s
-            img_pred = nib.Nifti1Image(img_pred_pp, img_pred.affine)
-            if not quiet: print(f"  Removed in {time.time() - st:.2f}s")
 
         if preview:
             from totalsegmentator.preview import generate_preview
@@ -613,9 +584,13 @@ def nnUNet_predict_image(file_in: Union[str, Path, Nifti1Image], file_out, task_
         # Reorder labels if needed
         if v1_order and task_name == "total":
             img_data = reorder_multilabel_like_v1(img_data, class_map["total"], class_map["total_v1"])
+            label_map = class_map["total_v1"]
+        else:
+            label_map = class_map[task_name]
 
         # Keep only voxel values corresponding to the roi_subset
         if roi_subset is not None:
+            label_map = {k: v for k, v in label_map.items() if v in roi_subset}
             img_data *= np.isin(img_data, list(label_map.keys()))
 
         # Prepare output nifti

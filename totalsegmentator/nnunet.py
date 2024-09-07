@@ -397,10 +397,13 @@ def nnUNet_predict_image(file_in: Union[str, Path, Nifti1Image], file_out, task_
         else:
             img_in_rsp = img_in
         if crop_save:
-            name, _ = os.path.splitext(crop_save)
-            np.save(name+ ".npy", bbox)
-            nib.save(img_in_rsp, crop_save)
-            return None, None, None
+            try: 
+                name, _ = os.path.splitext(crop_save)
+                np.save(name+ ".npy", bbox)
+                nib.save(img_in_rsp, crop_save)
+            except:
+                print("File is not saved")
+            return img_in_rsp, bbox, None
 
         nib.save(img_in_rsp, tmp_dir / "s01_0000.nii.gz")
 

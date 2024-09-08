@@ -7,7 +7,10 @@ from totalsegmentator.python_api import totalsegmentator
 output_img, bbox = totalsegmentator(input_img, task = "heartchambers_highres", crop_save="your_path.nii")
 ```
 You can add parameter for crop_save. If you do this, the function will not segment the image but give you the cropped image of specific organ and the bounding box from original image. If the crop_save is a valid path like in the example, the function will save "your_path.nii" for the cropped image and "your_path.npy" for you.
-
+To install the package:
+```
+pip install git+https://github.com/Qiyu-Zh/TotalSegmentator_Crop.git
+```
 
 
 

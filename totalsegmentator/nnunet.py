@@ -397,6 +397,8 @@ def nnUNet_predict_image(file_in: Union[str, Path, Nifti1Image], file_out, task_
         else:
             img_in_rsp = img_in
         if crop_save:
+            image_array = img_in_rsp.get_fdata()[::-1,::-1]
+            img_in_rsp = nib.Nifti1Image(image_array, img_in_rsp.affine, img_in_rsp.header)
             try: 
                 name, _ = os.path.splitext(crop_save)
                 np.save(name+ ".npy", bbox)

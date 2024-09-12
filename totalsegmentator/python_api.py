@@ -68,7 +68,7 @@ def totalsegmentator(input: Union[str, Path, Nifti1Image], output: Union[str, Pa
                      fast=False, nora_tag="None", preview=False, task="total", roi_subset=None,
                      statistics=False, radiomics=False, crop_path=None, body_seg=False,
                      force_split=False, output_type="nifti", quiet=False, verbose=False, test=0,
-                     skip_saving=False, device="gpu", license_number=None, crop_save = None,
+                     skip_saving=False, device="gpu", license_number=None, crop_save = None, crop_add = 20,
                      statistics_exclude_masks_at_border=True, no_derived_masks=False,
                      v1_order=False, fastest=False, roi_subset_robust=None, stats_aggregation="mean"):
     """
@@ -446,7 +446,7 @@ def totalsegmentator(input: Union[str, Path, Nifti1Image], output: Union[str, Pa
         for roi in roi_subset_crop:
             crop_mask[organ_seg_data == class_map_inv[roi]] = 1
         crop_mask = nib.Nifti1Image(crop_mask, organ_seg.affine)
-        crop_addon = [20,20,20]
+        crop_addon = [crop_add,crop_add,crop_add]
         crop = crop_mask
         if verbose: print(f"Rough organ segmentation generated in {time.time()-st:.2f}s")
 

@@ -4,9 +4,9 @@ In this package, you can only use total_segmentator to get the cropped image of 
 Exampe:
 ```
 from totalsegmentator.python_api import totalsegmentator
-output_img, bbox = totalsegmentator(input_img, task = "heartchambers_highres", crop_save="your_path.nii")
+output_img, bbox = totalsegmentator(input_img, task = "heartchambers_highres", crop_save="your_path.nii", crop_add = 0)
 ```
-You can add parameter for crop_save. If you do this, the function will not segment the image but give you the cropped image of specific organ and the bounding box from original image. If the crop_save is a valid path like in the example, the function will save "your_path.nii" for the cropped image and "your_path.npy" for you.
+You can add parameter for crop_save. If you do this, the function will not segment the image but give you the cropped image of specific organ and the bounding box from original image. If the crop_save is a valid path like in the example, the function will save "your_path.nii" for the cropped image and "your_path.npy" for you. Crop_add is the extra size of the box around the edge, defaulted by 20.
 To install the package:
 ```
 pip install git+https://github.com/Qiyu-Zh/TotalSegmentator_Crop.git

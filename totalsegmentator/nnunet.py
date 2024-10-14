@@ -398,7 +398,14 @@ def nnUNet_predict_image(file_in: Union[str, Path, Nifti1Image], file_out, task_
             img_in_rsp = img_in
         if crop_save:
             image_array = img_in_rsp.get_fdata()[::-1,::-1]
-            img_in_rsp = nib.Nifti1Image(image_array, img_in_rsp.affine, img_in_rsp.header)
+            affine = img_in_rsp.affine
+
+            flip_axes = [0, 1]
+            for axis in flip_axes:
+                affine[axis, axis] *= -1
+            for axis in flip_axes:
+                affine[axis, 3] = affine[axis, 3] - affine[axis, axis] * (image_array.shape[axis] - 1)
+            img_in_rsp = nib.Nifti1Image(image_array, affine, img_in_rsp.header)
             try:
                 name, _ = os.path.splitext(crop_save)
                 nib.save(img_in_rsp, crop_save)

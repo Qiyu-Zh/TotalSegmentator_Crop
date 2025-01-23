@@ -11,6 +11,38 @@ To install the package:
 ```
 pip install git+https://github.com/Qiyu-Zh/TotalSegmentator_Crop.git
 ```
+
+```
+train_image_dir = r'/home/molloi-lab-linux2/Desktop/ZQY/Heartchamber/nn_UNet/nnUNet_Predictions/58/same_size/100_contrast_reg_patient'
+train_label_dir = train_image_dir.replace("100_contrast_reg_patient", "lbl")
+make_if_dont_exist(train_label_dir)
+for file in tqdm(os.listdir(train_image_dir)):
+
+    cur_file = os.path.join(train_image_dir, file)
+    label_file = os.path.join(train_label_dir, file)
+    
+    
+    # out_path = os.path.join(train_label_dir, file.replace("_0000", ""))
+
+    # label_mask_path = out_path.replace("100_contrast_reg_patient", "100_noncontrast_patient").replace("ATERIAL", "NATIVE")
+    if file.endswith(".nii"):
+        output_img = totalsegmentator(cur_file, task = "heartchambers_highres")
+        image_array = output_img.get_fdata()
+        image_array[image_array == 3] = -1  # Temporary value to avoid conflict
+        image_array[image_array == 2] = 3
+        image_array[image_array == 5] = 2
+        image_array[image_array == 1] = 5
+        image_array[image_array == -1] = 1  # Change temporary value to final value
+        image_array[image_array > 5] = 0
+        image_array = image_array.astype(np.int16)
+        new_img = nib.Nifti1Image(image_array, output_img.affine, output_img.header)
+        # print(out_path, label_mask_path)
+        nib.save(new_img, label_file)
+```
+
+
+
+
 <br><br><br><br><br><br>
 
 

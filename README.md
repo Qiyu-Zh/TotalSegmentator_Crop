@@ -13,6 +13,24 @@ pip install git+https://github.com/Qiyu-Zh/TotalSegmentator_Crop.git
 ```
 
 ```
+from totalsegmentator.python_api import totalsegmentator
+import os
+import shutil
+
+def make_if_dont_exist(folder_path,overwrite=False):
+    """
+    creates a folder if it does not exists
+    input: 
+    folder_path : relative path of the folder which needs to be created
+    over_write :(default: False) if True overwrite the existing folder 
+    """
+    if os.path.exists(folder_path):
+        if overwrite:
+            shutil.rmtree(folder_path)
+            os.makedirs(folder_path)
+    else:
+        os.makedirs(folder_path)
+
 train_image_dir = r'/home/molloi-lab-linux2/Desktop/ZQY/Heartchamber/nn_UNet/nnUNet_Predictions/58/same_size/100_contrast_reg_patient'
 train_label_dir = train_image_dir.replace("100_contrast_reg_patient", "lbl")
 make_if_dont_exist(train_label_dir)
